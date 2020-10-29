@@ -1,14 +1,13 @@
 import requests
-import sys 
 import logging
 
 import pandas as pd
 import numpy as np
 
-from threading import Thread
+from multiprocessing import Process
 
 
-class GameData(Thread):
+class GameData(Process):
 
     def __init__(self, starting_point: int, count: int, logger: logging.Logger):
         super().__init__()
@@ -17,20 +16,18 @@ class GameData(Thread):
         self.logger = logger
         self.game_df = pd.DataFrame()
 
-    # TODO: 
-    #	append data to the local dataframe
-    #	return dataframe function
-
-    def team_data(self, df: pd.DataFrame):
+    @staticmethod
+    def team_data(df: pd.DataFrame):
         """
-        Gettting the teams and the scores from the team DataFrame that was passed in.
+        Getting the teams and the scores from the team DataFrame that was passed in.
         :param df: DataFrame containing the scores and names of the teams
         """
         teams = df[df.columns[0]].tolist()
         points = df[df.columns[-1]].tolist()
         return teams, points
 
-    def format_game_data_row(self, df: pd.DataFrame):
+    @staticmethod
+    def format_game_data_row(df: pd.DataFrame):
         """
         Transforming the data frame passed in the function, to a new dataframe containing one row 
         to append to the overall data frame. This will move the data from the rows
@@ -54,6 +51,13 @@ class GameData(Thread):
 
         return transformed_df
 
+    @staticmethod
+    def make_url(page_number: int):
+        """
+        Making the url to lookup the data.
+        """
+        return 'https://www.espn.com/nfl/matchup?gameId={}'.format(page_number)
+
     def get_data(self, url: str):
         """
         Getting the data from the website. The website will be collected as html and then passed into 
@@ -64,7 +68,6 @@ class GameData(Thread):
             html = requests.get(url).content
             nfl_df_list = pd.read_html(html)
         except Exception as e:
-            self.logger.info(str(e))
             return pd.DataFrame
 
         # get the team data from the first pd.DataFrame
@@ -82,12 +85,6 @@ class GameData(Thread):
         matchup_df.index = list(range(len(matchup_df.index)))
         
         return self.format_game_data_row(matchup_df)
-
-    def make_url(self, page_number: int):
-        """
-        Making the url to lookup the data.
-        """
-        return 'https://www.espn.com/nfl/matchup?gameId={}'.format(page_number)
     
     def get_game_df(self):
         """
@@ -113,8 +110,8 @@ class GameData(Thread):
             
             if not started and not new_data.empty:
                 self.game_df = new_data
-                started = False
+                started = True
                 
-            if i % 100 == 0:
+            if i % 10 == 0:
                 self.logger.info('************* {} *************'.format(i))
 
