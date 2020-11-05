@@ -3,7 +3,7 @@ import requests
 
 import numpy as np
 import pandas as pd
-# import seaborn as sns
+import seaborn as sns
 
 
 def team_data(df: pd.DataFrame):
