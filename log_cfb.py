@@ -1,10 +1,13 @@
 import sys
+import os
 import logging
+from pathlib import Path
+
 
 # setting the logging configuration
 logging.basicConfig(
-    format='%(asctime)s %(name)s - %(levelname)s: \n %(message)s\n',
-    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s: %(message)s',
+    level=logging.DEBUG,
     stream=sys.stdout)
 log = logging.getLogger()
 

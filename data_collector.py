@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 import requests
+import os
 
+from pathlib import Path
 from log_cfb import CFBDataLogger
 
 from multiprocessing import Pool
@@ -62,8 +64,17 @@ def get_data(url: str):
     try:
         html = requests.get(url).content
         nfl_df_list = pd.read_html(html)
-        cfb_log.info(nfl_df_list)
+
+        # printing the DataFrames from the url website
+        for i, df in enumerate(nfl_df_list):
+            cfb_log.info('{}: \n {}'.format(i, str(df.tail())))
+
+        # checking if the first DataFrame from the url is empty
+        # if the DataFrame at location 0 is empty return an empty DataFrame
+        if nfl_df_list[0].empty:
+            return pd.DataFrame
     except Exception as e:
+        cfb_log.info(str(e.with_traceback(e.__traceback__)))
         return pd.DataFrame
 
     # get the team data from the first pd.DataFrame
@@ -89,13 +100,13 @@ def run(value: int):
     :param value: integer that indicates the game number
     """
     url = make_url(value)
+    cfb_log.info(str(url))
     new_data = get_data(url)
     return new_data
 
 
 def main():
-    # starting_point = 220000000
-    starting_point = 401220225
+    starting_point = 220000000
     count = 100000
     game_dfs = []
 
@@ -106,16 +117,19 @@ def main():
         with Pool(processes=10) as p:
             starting_point = starting_point + (i * count)
 
-            for df in p.map(run, range(starting_point, starting_point + 10)):
+            for df in p.map(run, range(starting_point, starting_point + count)):
                 # checking if the returned DataFrame is empty upon return
-                # if not j.empty:
-                #     game_dfs.append(j)
-                #     log.info(game_dfs[-1].tail())
-                cfb_log.info(df.tail())
+                if not df.empty:
+                    game_dfs.append(df)
+                    cfb_log.info(str(game_dfs[-1].tail()))
 
     # writing the data to a csv file
     final_df = pd.concat(game_dfs)
-    final_df.to_csv()
+    final_df.index = list(range(final_df.shape[0]))
+    cfb_log.info(str(final_df))
+    file_path = str(Path(os.getcwd()+r'/final_df.csv'))
+    cfb_log.info(file_path)
+    final_df.to_csv(file_path, index=True)
 
 
 if __name__ == '__main__':
