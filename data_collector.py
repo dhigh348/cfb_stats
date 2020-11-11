@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import requests
 import os
+import time
+import random
 
 from pathlib import Path
 from log_cfb import CFBDataLogger
@@ -48,11 +50,35 @@ def format_game_data_row(df: pd.DataFrame):
     return transformed_df
 
 
-def make_url(page_number: int):
+def make_url(page_number: str):
     """
     Making the url to lookup the data.
     """
     return 'https://www.espn.com/nfl/matchup?gameId={}'.format(page_number)
+
+
+def handle_error(error: str):
+    """
+    Generic function to handle errors.
+    :param error: error message from the error
+    """
+    cfb_log.info(error)
+    return pd.DataFrame()
+
+
+def get_df(nfl_df_list: list, df_shape: tuple):
+    """
+    Function to return the correct df of the team data. This ensures the correct data is given to the team_df
+    :param nfl_df_list: list of data frames
+    :param df_shape: shape to match the data frame to
+    """
+    for i, df in enumerate(nfl_df_list):
+        if df.shape == df_shape:
+            return df
+    if df_shape == (2, 6):
+        return pd.DataFrame()
+    else:
+        return pd.DataFrame(pd.np.empty((0, 3)))
 
 
 def get_data(url: str):
@@ -65,25 +91,25 @@ def get_data(url: str):
         html = requests.get(url).content
         nfl_df_list = pd.read_html(html)
 
-        # printing the DataFrames from the url website
-        for i, df in enumerate(nfl_df_list):
-            cfb_log.info('{}: \n {}'.format(i, str(df.tail())))
-
         # checking if the first DataFrame from the url is empty
         # if the DataFrame at location 0 is empty return an empty DataFrame
-        if nfl_df_list[0].empty:
+        if nfl_df_list[0].empty or len(nfl_df_list) < 1:
             return pd.DataFrame
+    except requests.ConnectionError as e:
+        return handle_error(str(e.with_traceback(e.__traceback__)))
     except Exception as e:
-        cfb_log.info(str(e.with_traceback(e.__traceback__)))
-        return pd.DataFrame
+        return handle_error(str(e.with_traceback(e.__traceback__)))
 
     # get the team data from the first pd.DataFrame
-    team_df = nfl_df_list[0]
-    teams, points = team_data(team_df)
+    team_df = get_df(nfl_df_list=nfl_df_list, df_shape=(2, 6))
+    if team_df.empty:
+        teams, points = ['NA', 'NA'], [-1, -1]
+    else:
+        teams, points = team_data(team_df)
 
     # getting the matchup data
     matchup_columns = np.append('game_stat', teams)
-    matchup_df = nfl_df_list[1]
+    matchup_df = get_df(nfl_df_list=nfl_df_list, df_shape=(25, 3))
     matchup_df.columns = matchup_columns
 
     # setting up points information and sending back the new DataFrame
@@ -94,34 +120,32 @@ def get_data(url: str):
     return format_game_data_row(matchup_df)
 
 
-def run(value: int):
+def run(game_url: str):
     """
     Running the thread to call a url site and get the table data from the site.
-    :param value: integer that indicates the game number
+    :param game_url: url list to make the url and index
     """
-    url = make_url(value)
+    url = make_url(game_url.split('/')[-1])
     cfb_log.info(str(url))
     new_data = get_data(url)
+    rand_value = random.randrange(1, 4, 1)
+    time.sleep(rand_value)
+    cfb_log.info('******* {} *******'.format(rand_value))
     return new_data
 
 
-def main():
-    starting_point = 220000000
-    count = 100000
+def main_runner(game_urls: list):
     game_dfs = []
 
-    # going through each of the possible url beginnings
-    for i in range(210):
+    # going through each of the 100000 calls for each thread to get the game data
+    with Pool(processes=10) as p:
 
-        # going through each of the 100000 calls for each thread to get the game data
-        with Pool(processes=10) as p:
-            starting_point = starting_point + (i * count)
-
-            for df in p.map(run, range(starting_point, starting_point + count)):
-                # checking if the returned DataFrame is empty upon return
-                if not df.empty:
-                    game_dfs.append(df)
-                    cfb_log.info(str(game_dfs[-1].tail()))
+        for df in p.map(run, game_urls):
+            # for i, url in enumerate(game_urls):
+            #     df = run(url)
+            # checking if the returned DataFrame is empty upon return
+            if not df.empty:
+                game_dfs.append(df)
 
     # writing the data to a csv file
     final_df = pd.concat(game_dfs)
@@ -132,5 +156,5 @@ def main():
     final_df.to_csv(file_path, index=True)
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

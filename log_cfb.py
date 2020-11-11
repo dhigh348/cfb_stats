@@ -7,7 +7,7 @@ from pathlib import Path
 # setting the logging configuration
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s: %(message)s',
-    level=logging.DEBUG,
+    level=logging.INFO,
     stream=sys.stdout)
 log = logging.getLogger()
 
