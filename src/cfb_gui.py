@@ -114,13 +114,13 @@ class MainWindow(QMainWindow):
         """
         for name, widget in widgets.items():
             layout.addWidget(widget)
-
+            
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     window = MainWindow()
-    window.show()
+    run_application(window)
 
     # Start the event loop.
     app.exec_()
