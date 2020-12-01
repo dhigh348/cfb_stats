@@ -8,3 +8,6 @@ seaborn
 PyQt5
 pydot
 graphviz
+torch
+torchaudio
+torchvision
