@@ -64,7 +64,7 @@ def split_and_divide(value: str) -> float:
     return float(x) / float(y)
 
 
-def make_percentage(col_value: str) -> float:
+def make_percentage(col_value) -> float:
     """ Taking a value from the series and returning the percentage from the string. """
     return col_value.map(split_and_divide)
 

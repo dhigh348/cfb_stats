@@ -11,3 +11,5 @@ graphviz
 torch
 torchaudio
 torchvision
+requests
+streamlit

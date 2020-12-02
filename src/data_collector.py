@@ -6,7 +6,7 @@ import time
 import random
 
 from pathlib import Path
-from log_cfb import CFBDataLogger
+from .log_cfb import CFBDataLogger
 
 from multiprocessing import Pool
 
